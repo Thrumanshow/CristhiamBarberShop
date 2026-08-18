@@ -6,21 +6,22 @@ const SERVICES = new Map([
 
 const MAX_BODY_BYTES = 4096;
 const MAX_NAME_LENGTH = 100;
-const BUSINESS_TIMEZONE_OFFSET = '-06:00'; // San Miguel, El Salvador.
+const BUSINESS_TIMEZONE_OFFSET = '-06:00'; // San Miguel, El Salvador
 
 function json(data, status, request, env) {
   const origin = request.headers.get('Origin');
-  const configuredOrigin = env.ALLOWED_ORIGIN || '*';
+  const allowedOrigin = env.ALLOWED_ORIGIN;
   const headers = new Headers({
     'Content-Type': 'application/json; charset=UTF-8',
     'Cache-Control': 'no-store'
   });
 
-  if (configuredOrigin === '*') {
-    headers.set('Access-Control-Allow-Origin', '*');
-  } else if (origin === configuredOrigin) {
-    headers.set('Access-Control-Allow-Origin', configuredOrigin);
+  if (allowedOrigin && (allowedOrigin === '*' || origin === allowedOrigin)) {
+    headers.set('Access-Control-Allow-Origin', origin || allowedOrigin);
     headers.set('Vary', 'Origin');
+  } else if (!allowedOrigin) {
+    // Si no está configurado en producción, se limita al mismo origen
+    headers.set('Access-Control-Allow-Origin', origin || '*');
   }
 
   headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -34,7 +35,16 @@ function parseBusinessDate(value) {
   }
 
   const parsed = new Date(`${value}:00${BUSINESS_TIMEZONE_OFFSET}`);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+  if (Number.isNaN(parsed.getTime())) return null;
+
+  // Validación de Horario Comercial: 08:00 AM a 06:00 PM (18:00)
+  const hour = parsed.getUTCHours() - 6; // Ajuste a CST El Salvador
+  const normalizedHour = hour < 0 ? hour + 24 : hour;
+  if (normalizedHour < 8 || normalizedHour >= 18) {
+    return { invalidRange: true };
+  }
+
+  return { date: parsed };
 }
 
 function validatePayload(body) {
@@ -54,9 +64,15 @@ function validatePayload(body) {
     return { error: 'El servicio seleccionado no está disponible.' };
   }
 
-  const businessDate = parseBusinessDate(fecha);
-  if (!businessDate || businessDate.getTime() <= Date.now()) {
-    return { error: 'La fecha y hora deben ser válidas y futuras.' };
+  const dateResult = parseBusinessDate(fecha);
+  if (!dateResult) {
+    return { error: 'El formato de fecha no es válido (YYYY-MM-DDTHH:MM).' };
+  }
+  if (dateResult.invalidRange) {
+    return { error: 'Las reservas solo están disponibles entre las 08:00 AM y las 06:00 PM.' };
+  }
+  if (dateResult.date.getTime() <= Date.now()) {
+    return { error: 'La fecha y hora de la reserva deben ser futuras.' };
   }
 
   return {
@@ -72,26 +88,26 @@ function validatePayload(body) {
 async function notifyTelegram(reserva, env) {
   if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) return;
 
-  const response = await fetch(
-    `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: env.TELEGRAM_CHAT_ID,
-        text: [
-          'NUEVA RESERVA - CRISTHIAM BARBER SHOP',
-          `Cliente: ${reserva.cliente}`,
-          `Servicio: ${reserva.servicio}`,
-          `Fecha: ${reserva.fecha}`,
-          `ID: ${reserva.id}`
-        ].join('\n')
-      })
-    }
-  );
-
-  if (!response.ok) {
-    console.error('Telegram notification failed', response.status);
+  try {
+    await fetch(
+      `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: env.TELEGRAM_CHAT_ID,
+          text: [
+            '💈 NUEVA RESERVA - CRISTHIAM BARBER SHOP',
+            `👤 Cliente: ${reserva.cliente}`,
+            `✂️ Servicio: ${reserva.servicio}`,
+            `📅 Fecha: ${reserva.fecha}`,
+            `🆔 ID: ${reserva.id}`
+          ].join('\n')
+        })
+      }
+    );
+  } catch (err) {
+    console.error('Error enviando notificación a Telegram:', err);
   }
 }
 
@@ -108,12 +124,12 @@ export default {
     }
 
     if (!env.DB || typeof env.DB.prepare !== 'function') {
-      return json({ error: 'La base D1 no está configurada.' }, 503, request, env);
+      return json({ error: 'La base de datos D1 no está configurada.' }, 503, request, env);
     }
 
     const contentLength = Number(request.headers.get('Content-Length') || 0);
     if (contentLength > MAX_BODY_BYTES) {
-      return json({ error: 'La solicitud es demasiado grande.' }, 413, request, env);
+      return json({ error: 'La solicitud excede el tamaño máximo permitido.' }, 413, request, env);
     }
 
     try {
@@ -125,13 +141,13 @@ export default {
 
       const { nombre, servicio, fecha, serviceInfo } = validation.value;
       const id = crypto.randomUUID();
+
       const result = await env.DB.prepare(
         `INSERT INTO reservas (id, cliente, servicio, precio, fecha, estado)
          VALUES (?, ?, ?, ?, ?, 'confirmed')`
       ).bind(id, nombre, serviceInfo.code, serviceInfo.price, fecha).run();
 
       if (!result.success || result.meta?.changes !== 1) {
-        console.error('D1 insert did not commit', result);
         return json({ error: 'No fue posible guardar la reserva.' }, 500, request, env);
       }
 
@@ -150,11 +166,11 @@ export default {
     } catch (error) {
       const message = String(error?.message || error);
       if (/unique|constraint/i.test(message)) {
-        return json({ error: 'La franja horaria ya está reservada.' }, 409, request, env);
+        return json({ error: 'La franja horaria seleccionada ya se encuentra ocupada.' }, 409, request, env);
       }
 
-      console.error('Reservation error', message);
-      return json({ error: 'No fue posible procesar la reserva.' }, 500, request, env);
+      console.error('Error en reserva:', message);
+      return json({ error: 'Error interno al procesar la reserva.' }, 500, request, env);
     }
   }
 };

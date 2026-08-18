@@ -5,9 +5,8 @@ CREATE TABLE IF NOT EXISTS reservas (
   precio REAL NOT NULL CHECK (precio >= 0),
   fecha TEXT NOT NULL,
   estado TEXT NOT NULL DEFAULT 'confirmed' CHECK (estado IN ('pending', 'confirmed', 'cancelled', 'completed')),
-  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-  UNIQUE (fecha)
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_reservas_fecha ON reservas (fecha);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_reservas_fecha_activa ON reservas (fecha) WHERE estado != 'cancelled';
 CREATE INDEX IF NOT EXISTS idx_reservas_estado_fecha ON reservas (estado, fecha);
