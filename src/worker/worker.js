@@ -16,12 +16,9 @@ function json(data, status, request, env) {
     'Cache-Control': 'no-store'
   });
 
-  if (allowedOrigin && (allowedOrigin === '*' || origin === allowedOrigin)) {
-    headers.set('Access-Control-Allow-Origin', origin || allowedOrigin);
+  if (allowedOrigin && origin === allowedOrigin) {
+    headers.set('Access-Control-Allow-Origin', allowedOrigin);
     headers.set('Vary', 'Origin');
-  } else if (!allowedOrigin) {
-    // Si no está configurado en producción, se limita al mismo origen
-    headers.set('Access-Control-Allow-Origin', origin || '*');
   }
 
   headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -118,13 +115,17 @@ export default {
     if (request.method === 'OPTIONS') {
       const origin = request.headers.get('Origin');
       const allowedOrigin = env.ALLOWED_ORIGIN;
-      const headers = new Headers();
-      if (allowedOrigin && (allowedOrigin === '*' || origin === allowedOrigin)) {
-        headers.set('Access-Control-Allow-Origin', origin || allowedOrigin);
-        headers.set('Vary', 'Origin');
-      } else if (!allowedOrigin) {
-        headers.set('Access-Control-Allow-Origin', origin || '*');
+
+      if (!allowedOrigin) {
+        return new Response('ALLOWED_ORIGIN no configurado en el Worker.', { status: 500 });
       }
+      if (origin !== allowedOrigin) {
+        return new Response('Origen no autorizado.', { status: 403 });
+      }
+
+      const headers = new Headers();
+      headers.set('Access-Control-Allow-Origin', allowedOrigin);
+      headers.set('Vary', 'Origin');
       headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
       headers.set('Access-Control-Allow-Headers', 'Content-Type');
       return new Response(null, { status: 204, headers });

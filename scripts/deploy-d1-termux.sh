@@ -22,6 +22,11 @@ require_cmd jq
 
 : "${CF_ACCOUNT_ID:?Exporta CF_ACCOUNT_ID antes de ejecutar el script.}"
 : "${CF_API_TOKEN:?Exporta CF_API_TOKEN antes de ejecutar el script.}"
+: "${ALLOWED_ORIGIN:?Exporta ALLOWED_ORIGIN antes de ejecutar el script (origen exacto del frontend).}"
+
+if [[ "$ALLOWED_ORIGIN" == "*" ]]; then
+  fail "ALLOWED_ORIGIN no puede ser '*'. Usa el origen exacto del frontend, ej. https://barberia.hormigasais.com"
+fi
 
 [[ -f "$WORKER_FILE" ]] || fail "No existe $WORKER_FILE"
 [[ -f "$SCHEMA_FILE" ]] || fail "No existe $SCHEMA_FILE"
