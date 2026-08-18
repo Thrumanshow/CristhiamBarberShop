@@ -177,7 +177,7 @@
       };
 
       try {
-        const res = await fetch('/api/reservar', {
+        const res = await fetch('https://cristhiam-barber-api.chrisquionez354.workers.dev/api/reservar', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
