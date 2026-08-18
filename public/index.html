@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cristhiam Barber Shop | Reservas</title>
+  <style>
+    :root {
+      --bg: #0d0d0d;
+      --card: #181818;
+      --accent: #f5c518;
+      --text: #f0f0f0;
+      --border: #2a2a2a;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    header { text-align: center; margin-bottom: 2rem; }
+    h1 { color: var(--accent); margin-bottom: 0.2rem; }
+    p.subtitle { color: #888; font-size: 0.9rem; margin: 0; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 400px;
+      box-sizing: border-box;
+    }
+    .form-group { margin-bottom: 1.2rem; }
+    label { display: block; margin-bottom: 0.4rem; font-size: 0.85rem; color: #ccc; }
+    input, select, button {
+      width: 100%;
+      padding: 0.8rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #000;
+      color: #fff;
+      box-sizing: border-box;
+    }
+    button {
+      background: var(--accent);
+      color: #000;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+    footer { margin-top: 3rem; font-size: 0.75rem; color: #555; text-align: center; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Cristhiam Barber Shop</h1>
+    <p class="subtitle">Nodo Soberano de Reservas Edge</p>
+  </header>
+
+  <main class="card">
+    <form id="booking-form">
+      <div class="form-group">
+        <label for="nombre">Nombre Completo</label>
+        <input type="text" id="nombre" name="nombre" placeholder="Ej. Juan Pérez" required>
+      </div>
+
+      <div class="form-group">
+        <label for="servicio">Servicio</label>
+        <select id="servicio" name="servicio">
+          <option value="corte">Corte Tradicional ($10.00)</option>
+          <option value="barba">Diseño de Barba ($7.00)</option>
+          <option value="combo">Combo Corte + Barba ($15.00)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="fecha">Fecha y Hora</label>
+        <input type="datetime-local" id="fecha" name="fecha" required>
+      </div>
+
+      <button type="submit">Confirmar Reserva</button>
+    </form>
+  </main>
+
+  <footer>
+    Powered by HormigasAIS Edge Infrastructure | San Miguel
+  </footer>
+</body>
+</html>
