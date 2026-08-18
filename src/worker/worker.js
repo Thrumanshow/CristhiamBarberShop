@@ -116,7 +116,18 @@ export default {
     const url = new URL(request.url);
 
     if (request.method === 'OPTIONS') {
-      return json({ status: 'ok' }, 204, request, env);
+      const origin = request.headers.get('Origin');
+      const allowedOrigin = env.ALLOWED_ORIGIN;
+      const headers = new Headers();
+      if (allowedOrigin && (allowedOrigin === '*' || origin === allowedOrigin)) {
+        headers.set('Access-Control-Allow-Origin', origin || allowedOrigin);
+        headers.set('Vary', 'Origin');
+      } else if (!allowedOrigin) {
+        headers.set('Access-Control-Allow-Origin', origin || '*');
+      }
+      headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+      headers.set('Access-Control-Allow-Headers', 'Content-Type');
+      return new Response(null, { status: 204, headers });
     }
 
     if (url.pathname !== '/api/reservar' || request.method !== 'POST') {
