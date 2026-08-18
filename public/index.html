@@ -11,6 +11,8 @@
       --accent: #f5c518;
       --text: #f0f0f0;
       --border: #2a2a2a;
+      --success: #00ff9f;
+      --error: #ff4444;
     }
     body {
       background: var(--bg);
@@ -53,6 +55,17 @@
       cursor: pointer;
       margin-top: 1rem;
     }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #status-msg {
+      margin-top: 1rem;
+      padding: 0.8rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      text-align: center;
+      display: none;
+    }
+    #status-msg.success { background: rgba(0,255,159,0.1); color: var(--success); border: 1px solid var(--success); }
+    #status-msg.error { background: rgba(255,68,68,0.1); color: var(--error); border: 1px solid var(--error); }
     footer { margin-top: 3rem; font-size: 0.75rem; color: #555; text-align: center; }
   </style>
 </head>
@@ -72,9 +85,9 @@
       <div class="form-group">
         <label for="servicio">Servicio</label>
         <select id="servicio" name="servicio">
-          <option value="corte">Corte Tradicional ($10.00)</option>
-          <option value="barba">Diseño de Barba ($7.00)</option>
-          <option value="combo">Combo Corte + Barba ($15.00)</option>
+          <option value="Corte Tradicional ($10.00)">Corte Tradicional ($10.00)</option>
+          <option value="Diseño de Barba ($7.00)">Diseño de Barba ($7.00)</option>
+          <option value="Combo Corte + Barba ($15.00)">Combo Corte + Barba ($15.00)</option>
         </select>
       </div>
 
@@ -83,12 +96,58 @@
         <input type="datetime-local" id="fecha" name="fecha" required>
       </div>
 
-      <button type="submit">Confirmar Reserva</button>
+      <button type="submit" id="btn-submit">Confirmar Reserva</button>
+      <div id="status-msg"></div>
     </form>
   </main>
 
   <footer>
     Powered by HormigasAIS Edge Infrastructure | San Miguel
   </footer>
+
+  <script>
+    const form = document.getElementById('booking-form');
+    const btn = document.getElementById('btn-submit');
+    const statusMsg = document.getElementById('status-msg');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      btn.disabled = true;
+      btn.textContent = 'Procesando...';
+      statusMsg.style.display = 'none';
+
+      const payload = {
+        nombre: document.getElementById('nombre').value,
+        servicio: document.getElementById('servicio').value,
+        fecha: document.getElementById('fecha').value
+      };
+
+      try {
+        const res = await fetch('/api/reservar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.status === 'success') {
+          statusMsg.className = 'success';
+          statusMsg.textContent = `¡Reserva confirmada! ID: ${data.data.id.substring(0,8)}`;
+          statusMsg.style.display = 'block';
+          form.reset();
+        } else {
+          throw new Error(data.error || 'Error en el servidor');
+        }
+      } catch (err) {
+        statusMsg.className = 'error';
+        statusMsg.textContent = `Error: ${err.message}`;
+        statusMsg.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Confirmar Reserva';
+      }
+    });
+  </script>
 </body>
 </html>
