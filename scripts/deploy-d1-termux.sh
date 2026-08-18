@@ -86,20 +86,13 @@ QUERY_RESPONSE="$(curl --fail-with-body --silent --show-error \
 assert_success "$QUERY_RESPONSE"
 printf '%s\n' 'Esquema D1 aplicado correctamente.'
 
-if [[ -n "${ALLOWED_ORIGIN:-}" ]]; then
-  METADATA="$(jq -n \
+METADATA="$(jq -n \
     --arg db "$D1_ID" \
     --arg origin "$ALLOWED_ORIGIN" \
     '{main_module:"worker.js",bindings:[
-      {name:"DB",type:"d1",id:$db},
-      {name:"ALLOWED_ORIGIN",type:"plain_text",text:$origin}
+        {name:"DB",type:"d1",id:$db},
+        {name:"ALLOWED_ORIGIN",type:"plain_text",text:$origin}
     ]}')"
-else
-  printf '%s\n' 'ADVERTENCIA: ALLOWED_ORIGIN no está definido; se mantendrá CORS abierto (*) temporalmente.' >&2
-  METADATA="$(jq -n --arg db "$D1_ID" \
-    '{main_module:"worker.js",bindings:[{name:"DB",type:"d1",id:$db}]}')"
-fi
-
 printf 'Desplegando Worker %s...\n' "$WORKER_NAME"
 DEPLOY_RESPONSE="$(curl --fail-with-body --silent --show-error \
   -X PUT "$API_BASE/accounts/$CF_ACCOUNT_ID/workers/scripts/$WORKER_NAME/content" \

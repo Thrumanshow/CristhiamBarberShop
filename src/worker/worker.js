@@ -139,6 +139,15 @@ export default {
       return json({ error: 'La base de datos D1 no está configurada.' }, 503, request, env);
     }
 
+    if (!env.ALLOWED_ORIGIN) {
+      return json({ error: 'Configuración CORS incompleta.' }, 500, request, env);
+    }
+
+    const requestOrigin = request.headers.get('Origin');
+    if (requestOrigin && requestOrigin !== env.ALLOWED_ORIGIN) {
+      return json({ error: 'Origen no autorizado.' }, 403, request, env);
+    }
+
     const contentLength = Number(request.headers.get('Content-Length') || 0);
     if (contentLength > MAX_BODY_BYTES) {
       return json({ error: 'La solicitud excede el tamaño máximo permitido.' }, 413, request, env);
