@@ -131,6 +131,23 @@ export default {
       return new Response(null, { status: 204, headers });
     }
 
+    if (url.pathname.startsWith('/api/reserva/') && request.method === 'GET') {
+      const id = url.pathname.split('/api/reserva/')[1];
+      if (!id || id.length < 10) {
+        return json({ error: 'ID de reserva inválido.' }, 400, request, env);
+      }
+
+      const row = await env.DB.prepare(
+        'SELECT servicio, fecha, estado FROM reservas WHERE id = ?'
+      ).bind(id).first();
+
+      if (!row) {
+        return json({ error: 'Reserva no encontrada.' }, 404, request, env);
+      }
+
+      return json({ status: 'success', reserva: row }, 200, request, env);
+    }
+
     if (url.pathname !== '/api/reservar' || request.method !== 'POST') {
       return json({ error: 'Ruta no encontrada.' }, 404, request, env);
     }
